@@ -100,7 +100,58 @@ int get_ip_by_inf(struct in_addr* ip, const char *dev){
 
 	return 1;
 }
+void make_arp_packet(u_char *packet[], int *length, int opcode, struct in_addr my_ip, struct in_addr victim_ip, u_char *my_mac, u_char *victim_mac){
+	struct ether_header eth;
+	struct ether_arp arp;
+	
+	//fill the ethernet header
+	if(opcode == ARPOP_REQUEST){
+		for(int i=0; i<6; i++)
+			eth.ether_dhost[i] = 0xff;
+	}
+	else{
+		
+		for(int i=0; i<6; i++)
+			eth.ether_dhost[i] = victim_mac[i];	
+	}
 
+
+	for(int i=0; i<6; i++){
+		eth.ether_shost[i] = my_mac[i];
+	}
+
+	eth.ether_type = htons(ETHERTYPE_ARP);
+	
+	memcpy(*packet, &eth, sizeof(eth));
+	(*length) += sizeof(eth);
+
+	//fill the arp request header
+	arp.arp_hrd = htons(0x0001);
+	arp.arp_pro = htons(0x0800);
+	arp.arp_hln = 0x06;
+	arp.arp_pln = 0x04;
+	arp.arp_op = htons(opcode);
+	
+	for(int i=0; i<6; i++){
+		arp.arp_sha[i] = my_mac[i];
+	}
+	
+	if(opcode == ARPOP_REPLY){
+		for(int i=0; i<6; i++)
+			arp.arp_tha[i] = victim_mac[i];
+	}
+	else{
+			for(int i=0; i<6; i++)
+				arp.arp_tha[i] = 0x00;
+	}
+
+	memcpy(arp.arp_spa, &my_ip, sizeof(my_ip));
+	memcpy(arp.arp_tpa, &victim_ip, sizeof(victim_ip));
+	
+	memcpy((*packet)+(*length), &arp, sizeof(arp));
+	(*length) += sizeof(arp);
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -153,6 +204,8 @@ int main(int argc, char *argv[])
 
 	u_char my_mac[6];
 	u_char victim_mac[6];
+	u_char packet[100];
+	u_char receive_packet[1500];
 
 	get_mac_by_inf(my_mac, argv[1]);
 	get_ip_by_inf(&my_ip_addr, argv[1]);
@@ -163,27 +216,27 @@ int main(int argc, char *argv[])
 	
 	printf("send arp %s\n", argv[2]);
 
-	u_char packet[42];
-	packet[0]=255;
+
+	/*packet[0]=255;
     packet[1]=255;
     packet[2]=255;
     packet[3]=255;
     packet[4]=255;
-    packet[5]=255;
+    packet[5]=255;*/
     
     /* set mac source tomy mac */
-    packet[6]=0x00;
+    /*packet[6]=0x00;
     packet[7]=0x0b;
     packet[8]=0xdb;
     packet[9]=0xdd;
     packet[10]=0x3f;
-    packet[11]=0xa1;
+    packet[11]=0xa1;*/
 	// type = arp
-	packet[12]=0x08;
-	packet[13]=0x06;
+	/*packet[12]=0x08;
+	packet[13]=0x06;*/
 	//data packet ************************************
 	// hardware type =1 ethernet  (6 IEE 802)
-	packet[14]=0x00;
+	/*packet[14]=0x00;
 	packet[15]=0x01;
 	//protocol address type IPV4	
 	packet[16]=0x08;
@@ -222,7 +275,7 @@ int main(int argc, char *argv[])
 	packet[38]=81;
 	packet[39]=31;
 	packet[40]=164;
-	packet[41]=123;
+	packet[41]=123;*/
 
     
     /* Fill the rest of the packet */
