@@ -125,16 +125,16 @@ int main(int argc, char *argv[])
 			return(2);
 		}
 		/* Find the properties for the device */
-		if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
-			fprintf(stderr, "Couldn't get netmask for device %s: %s\n", dev, errbuf);
+		if (pcap_lookupnet(argv[1], &net, &mask, errbuf) == -1) {
+			fprintf(stderr, "Couldn't get netmask for device %s: %s\n", argv[1], errbuf);
 			net = 0;
 			mask = 0;
 		}
 		/* Open the session in promiscuous mode */
-		handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+		handle = pcap_open_live(argv[1], BUFSIZ, 1, 1000, errbuf);
 		//handle = pcap_open_live("dum0", BUFSIZ, 1, 1000, errbuf);
 		if (handle == NULL) {
-			fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
+			fprintf(stderr, "Couldn't open device %s: %s\n", argv[1], errbuf);
 			return(2);
 		}
 		/* Compile and apply the filter */
@@ -152,9 +152,16 @@ int main(int argc, char *argv[])
 	struct in_addr my_ip_addr;
 
 	u_char my_mac[6];
+	u_char victim_mac[6];
 
 	get_mac_by_inf(my_mac, argv[1]);
 	get_ip_by_inf(&my_ip_addr, argv[1]);
+	inet_pton(AF_INET, argv[2], &vic_ip_addr);
+	inet_pton(AF_INET, argv[3], &target_ip_addr);
+	
+	inet_ntop(AF_INET, &my_ip_addr, ip_addr, sizeof(ip_addr));
+	
+	printf("send arp %s\n", argv[2]);
 
 	u_char packet[42];
 	packet[0]=255;
